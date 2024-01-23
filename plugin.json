@@ -1,0 +1,11 @@
+﻿{
+  "Group": "Widgets",
+  "FriendlyName": "Advanced Admin Search",
+  "SystemName": "Widgets.AdvancedAdminSearch",
+  "Version": "1.0",
+  "SupportedVersions": [ "4.60" ],
+  "Author": "Dan Fehrenbach",
+  "DisplayOrder": 1,
+  "FileName": "dfdev.Plugin.Widgets.AdvancedAdminSearch.dll",
+  "Description": "Expands search of admin search bar."
+}
