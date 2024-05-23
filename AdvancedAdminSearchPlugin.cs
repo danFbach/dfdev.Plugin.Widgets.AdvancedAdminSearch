@@ -25,6 +25,7 @@ namespace dfdev.Plugin.Widgets.AdvancedAdminSearch
         private readonly ISettingService _settingService;
         private readonly ILocalizationService _localizationService;
         private readonly IWebHelper _webHelper;
+        private readonly IPermissionService _permissionService;
 
         #endregion
 
@@ -32,11 +33,13 @@ namespace dfdev.Plugin.Widgets.AdvancedAdminSearch
 
         public AdvancedAdminSearchPlugin(ISettingService settingService,
             ILocalizationService localizationService,
-            IWebHelper webHelper)
+            IWebHelper webHelper,
+            IPermissionService permissionService)
         {
             _settingService = settingService;
             _localizationService = localizationService;
             _webHelper = webHelper;
+            _permissionService = permissionService;
         }
 
         public bool HideInWidgetList => false;
@@ -76,44 +79,89 @@ namespace dfdev.Plugin.Widgets.AdvancedAdminSearch
             await _localizationService.AddOrUpdateLocaleResourceAsync(new Dictionary<string, string>
             {
                 ["Plugins.Widgets.AdvancedAdminSearch.Fields.SearchOrders"] = "Search Order Numbers",
+                ["Plugins.Widgets.AdvancedAdminSearch.Fields.MaxOrderResults"] = "Number of Order Results",
                 ["Plugins.Widgets.AdvancedAdminSearch.Fields.SearchCustomerEmails"] = "Search Customer Emails",
                 ["Plugins.Widgets.AdvancedAdminSearch.Fields.SearchCustomerNames"] = "Search Customer Names",
+                ["Plugins.Widgets.AdvancedAdminSearch.Fields.MaxCustomerResults"] = "Number of Customer Results",
                 ["Plugins.Widgets.AdvancedAdminSearch.Fields.SearchProductSkus"] = "Search Product Skus",
+                ["Plugins.Widgets.AdvancedAdminSearch.Fields.MaxProductResults"] = "Number of Product Results",
             });
+
+            var widgetSettings = await _settingService.LoadSettingAsync<WidgetSettings>();
+
+            if (!widgetSettings.ActiveWidgetSystemNames.Contains("Widgets.AdvancedAdminSearch"))
+            {
+                widgetSettings.ActiveWidgetSystemNames.Add("Widgets.AdvancedAdminSearch");
+                await _settingService.SaveSettingAsync(widgetSettings);
+            }
 
             await base.InstallAsync();
         }
 
-        public Task ManageSiteMapAsync(SiteMapNode rootNode)
+        public override async Task UpdateAsync(string currentVersion, string targetVersion)
         {
+            await _localizationService.AddOrUpdateLocaleResourceAsync(new Dictionary<string, string>
+            {
+                ["Plugins.Widgets.AdvancedAdminSearch.Fields.SearchOrders"] = "Search Order Numbers",
+                ["Plugins.Widgets.AdvancedAdminSearch.Fields.MaxOrderResults"] = "Number of Order Results",
+                ["Plugins.Widgets.AdvancedAdminSearch.Fields.SearchCustomerEmails"] = "Search Customer Emails",
+                ["Plugins.Widgets.AdvancedAdminSearch.Fields.SearchCustomerNames"] = "Search Customer Names",
+                ["Plugins.Widgets.AdvancedAdminSearch.Fields.MaxCustomerResults"] = "Number of Customer Results",
+                ["Plugins.Widgets.AdvancedAdminSearch.Fields.SearchProductSkus"] = "Search Product Skus",
+                ["Plugins.Widgets.AdvancedAdminSearch.Fields.MaxProductResults"] = "Number of Product Results",
+            });
 
-            var configNode = rootNode.ChildNodes.FirstOrDefault(node => node.Title.Equals("Configuration"));
-            if (configNode == null)
-                return Task.CompletedTask;
+            await base.UpdateAsync(currentVersion, targetVersion);
+        }
 
-            var settingsNode = configNode.ChildNodes.FirstOrDefault(x => x.Title.Equals("Settings"));
-            if (settingsNode == null)
-                return Task.CompletedTask;
+        public async Task ManageSiteMapAsync(SiteMapNode rootNode)
+        {
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManagePlugins))
+                return;
 
-            var index = 0;
+            var dfdevNode = rootNode.ChildNodes.FirstOrDefault(node => node.Title.Equals("dfDev"));
 
-            var allSettingsNode = settingsNode.ChildNodes.FirstOrDefault(x => x.Title.Equals("All settings (advanced)"));
+            if (dfdevNode is null)
+            {
+                dfdevNode = new SiteMapNode()
+                {
+                    IconClass = "fas fa-dna",
+                    Title = "dfDev",
+                    SystemName = "dfdev",
+                    Visible = true,
+                    RouteValues = new RouteValueDictionary(),
 
-            if (allSettingsNode != null)
-                index = settingsNode.ChildNodes.IndexOf(allSettingsNode);
+                };
+                rootNode.ChildNodes.Add(dfdevNode);
+            }
 
-            configNode.ChildNodes.Insert(index - 1, new SiteMapNode
+            var dfdevPluginNode = dfdevNode.ChildNodes.FirstOrDefault(node => node.Title.Equals("Plugins"));
+
+            if (dfdevPluginNode is null)
+            {
+                dfdevPluginNode = new SiteMapNode()
+                {
+                    IconClass = "fa icon-plugins",
+                    Title = "Plugins",
+                    SystemName = "dfdev.plugins",
+                    Visible = true,
+                    RouteValues = new RouteValueDictionary(),
+                };
+                dfdevNode.ChildNodes.Add(dfdevPluginNode);
+            }
+
+            dfdevPluginNode.ChildNodes.Insert(0, new SiteMapNode
             {
                 SystemName = "Widgets.AdvancedAdminSearch.Configure",
                 Title = "Advanced Admin Search",
                 ControllerName = "AdvancedAdminSearch",
                 ActionName = "Configure",
-                IconClass = "far fa-dot-circle",
+                IconClass = "fab fa-searchengin",
                 Visible = true,
-                RouteValues = new RouteValueDictionary() { }
+                RouteValues = new RouteValueDictionary()
             });
 
-            return Task.CompletedTask;
+            return;
         }
 
         /// <summary>

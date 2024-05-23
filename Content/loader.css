@@ -1,0 +1,34 @@
+﻿#list-loader {
+  display: none;
+  height: 2px;
+  width: 100%;
+  background-color: #007bff;
+}
+
+  #list-loader.loading {
+    display: block;
+  }
+
+  #list-loader > div {
+    margin: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    margin-left: 0;
+    margin-right: 100%;
+    animation: list-loader 0.7s ease-in-out infinite alternate-reverse;
+    width: 15px;
+    height: 100%;
+    background: linear-gradient(-110deg, #007bff, #FFF, #007bff);
+  }
+
+@keyframes list-loader {
+  0% {
+    margin-left: 0;
+    margin-right: calc(100% - 15px);
+  }
+
+  100% {
+    margin-left: calc(100% - 15px);
+    margin-right: 0;
+  }
+}

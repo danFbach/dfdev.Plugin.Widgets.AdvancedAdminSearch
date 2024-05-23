@@ -6,9 +6,7 @@ namespace dfdev.Plugin.Widgets.AdvancedAdminSearch.Components
 {
     public class AdminSearchComponent : NopViewComponent
     {
-        public AdminSearchComponent()
-        {
-        }
+        public AdminSearchComponent() { }
 
         public async Task<IViewComponentResult> InvokeAsync()
         {

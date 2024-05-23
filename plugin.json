@@ -2,7 +2,7 @@
   "Group": "Widgets",
   "FriendlyName": "Advanced Admin Search",
   "SystemName": "Widgets.AdvancedAdminSearch",
-  "Version": "1.0",
+  "Version": "4.60.1",
   "SupportedVersions": [ "4.60" ],
   "Author": "Dan Fehrenbach",
   "DisplayOrder": 1,

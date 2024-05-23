@@ -26,9 +26,10 @@ namespace dfdev.Plugin.Widgets.AdvancedAdminSearch.Controller
 
         private readonly IPermissionService _permissionService;
         private readonly ISettingService _settingService;
-        private readonly AdvancedAdminSearchSettings _advancedAdminSearchSettings;
         private readonly INotificationService _notificationService;
         private readonly ILocalizationService _localizationService;
+
+        private readonly AdvancedAdminSearchSettings _advancedAdminSearchSettings;
 
         private readonly IRepository<Order> _orders;
         private readonly IRepository<Customer> _customers;
@@ -40,18 +41,19 @@ namespace dfdev.Plugin.Widgets.AdvancedAdminSearch.Controller
 
         public AdvancedAdminSearchController(IPermissionService permissionService,
             ISettingService settingService,
-            AdvancedAdminSearchSettings advancedAdminSearchSettings,
             INotificationService notificationService,
             ILocalizationService localizationService,
+            AdvancedAdminSearchSettings advancedAdminSearchSettings,
             IRepository<Order> orders,
             IRepository<Customer> customers,
             IRepository<Product> products)
         {
             _permissionService = permissionService;
             _settingService = settingService;
-            _advancedAdminSearchSettings = advancedAdminSearchSettings;
             _notificationService = notificationService;
             _localizationService = localizationService;
+
+            _advancedAdminSearchSettings = advancedAdminSearchSettings;
 
             _orders = orders;
             _customers = customers;
@@ -64,15 +66,18 @@ namespace dfdev.Plugin.Widgets.AdvancedAdminSearch.Controller
 
         public async Task<IActionResult> Configure()
         {
-            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManagePaymentMethods))
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManagePlugins))
                 return AccessDeniedView();
 
             var model = new ConfigurationModel
             {
                 SearchCustomerEmails = _advancedAdminSearchSettings.SearchCustomerEmails,
                 SearchCustomerNames = _advancedAdminSearchSettings.SearchCustomerNames,
+                MaxCustomerResults = _advancedAdminSearchSettings.MaxCustomerResults,
                 SearchOrders = _advancedAdminSearchSettings.SearchOrders,
+                MaxOrderResults = _advancedAdminSearchSettings.MaxOrderResults,
                 SearchProductSkus = _advancedAdminSearchSettings.SearchProductSkus,
+                MaxProductResults = _advancedAdminSearchSettings.MaxProductResults,
             };
 
             return View("~/Plugins/Widgets.AdvancedAdminSearch/Views/Configure.cshtml", model);
@@ -81,7 +86,7 @@ namespace dfdev.Plugin.Widgets.AdvancedAdminSearch.Controller
         [HttpPost]
         public async Task<IActionResult> Configure(ConfigurationModel model)
         {
-            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManagePaymentMethods))
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManagePlugins))
                 return AccessDeniedView();
 
             if (!ModelState.IsValid)
@@ -90,8 +95,11 @@ namespace dfdev.Plugin.Widgets.AdvancedAdminSearch.Controller
             //save settings
             _advancedAdminSearchSettings.SearchCustomerEmails = model.SearchCustomerEmails;
             _advancedAdminSearchSettings.SearchCustomerNames = model.SearchCustomerNames;
+            _advancedAdminSearchSettings.MaxCustomerResults = model.MaxCustomerResults;
             _advancedAdminSearchSettings.SearchOrders = model.SearchOrders;
+            _advancedAdminSearchSettings.MaxOrderResults = model.MaxOrderResults;
             _advancedAdminSearchSettings.SearchProductSkus = model.SearchProductSkus;
+            _advancedAdminSearchSettings.MaxProductResults = model.MaxProductResults;
 
             await _settingService.SaveSettingAsync(_advancedAdminSearchSettings);
             //now clear settings cache
@@ -105,6 +113,7 @@ namespace dfdev.Plugin.Widgets.AdvancedAdminSearch.Controller
         [HttpPost, ActionName("GetResults")]
         public async Task<IActionResult> GetResultsAsync(AdminQueryModel model)
         {
+            var htmlLinebreak = "<br/>";
 
             model.SearchQuery = model.SearchQuery.Trim();
 
@@ -135,7 +144,7 @@ namespace dfdev.Plugin.Widgets.AdvancedAdminSearch.Controller
                                        select new { o.Id, CustomerName = c.FirstName + " " + c.LastName }).FirstOrDefaultAsync();
 
                     if (order != null)
-                        return new List<SearchResultModel>() { new(order.Id, $"Order #{order.Id}{Environment.NewLine}{order.CustomerName}", $"/Admin/Order/Edit/{order.Id}") };
+                        return new List<SearchResultModel>() { new(order.Id, $"Order #{order.Id}{htmlLinebreak}{order.CustomerName}", $"/Admin/Order/Edit/{order.Id}") };
                 }
 
                 return new List<SearchResultModel>();
@@ -146,7 +155,7 @@ namespace dfdev.Plugin.Widgets.AdvancedAdminSearch.Controller
                 if (_advancedAdminSearchSettings.SearchProductSkus)
                 {
                     var products = (await (from p in _products.Table
-                                           where p.Sku.Contains(query, StringComparison.InvariantCultureIgnoreCase)
+                                           where p.Sku.Contains(query, StringComparison.InvariantCultureIgnoreCase) && !p.Deleted
                                            select new
                                            {
                                                p.Id,
@@ -164,7 +173,7 @@ namespace dfdev.Plugin.Widgets.AdvancedAdminSearch.Controller
                                                   (p.Sku.StartsWith(query, StringComparison.InvariantCultureIgnoreCase) ? 5 : 0) +
                                                   (p.Sku.Contains(query, StringComparison.InvariantCultureIgnoreCase) ? 1 : 0)
                                           })
-                                          .OrderByDescending(x => x.Score).Take(10).ToList();
+                                          .OrderByDescending(x => x.Score).Take(_advancedAdminSearchSettings.MaxProductResults).ToList();
 
                     if (products.Any())
                         return products.Select(x => new SearchResultModel(x.Id, $"{x.Sku} - {x.Name}", $"/Admin/Product/Edit/{x.Id}"));
@@ -193,7 +202,7 @@ namespace dfdev.Plugin.Widgets.AdvancedAdminSearch.Controller
                                            });
 
                     if (customers.Any())
-                        customerResults.AddRange(customers.Select(x => new SearchResultModel(x.Id, $"{x.Name} ({x.Email})", $"/Admin/Customer/Edit/{x.Id}", x.Score)));
+                        customerResults.AddRange(customers.Select(x => new SearchResultModel(x.Id, $"{x.Name}{htmlLinebreak}{x.Email}", $"/Admin/Customer/Edit/{x.Id}", x.Score)));
                 }
 
                 if (_advancedAdminSearchSettings.SearchCustomerNames)
@@ -218,15 +227,15 @@ namespace dfdev.Plugin.Widgets.AdvancedAdminSearch.Controller
                         if (customerResults.FirstOrDefault(x => x.EntityId == customer.Id) is SearchResultModel existingResult)
                             existingResult.RelevanceScore += customer.Score;
                         else
-                            customerResults.Add(new SearchResultModel(customer.Id, $"{customer.Name} ({customer.Email})", $"/Admin/Customer/Edit/{customer.Id}", customer.Score));
+                            customerResults.Add(new SearchResultModel(customer.Id, $"{customer.Name}{htmlLinebreak}{customer.Email}", $"/Admin/Customer/Edit/{customer.Id}", customer.Score));
                     }
 
                 }
 
                 customerResults = customerResults.OrderByDescending(x => x.RelevanceScore).ToList();
 
-                if (customerResults.Count > 10)
-                    customerResults = customerResults.Take(10).ToList();
+                if (customerResults.Count > _advancedAdminSearchSettings.MaxCustomerResults)
+                    customerResults = customerResults.Take(_advancedAdminSearchSettings.MaxCustomerResults).ToList();
 
                 return customerResults;
             }

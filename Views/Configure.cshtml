@@ -19,6 +19,16 @@
                 </div>
                 <div class="form-group row">
                     <div class="col-md-3">
+                        <nop-label asp-for="MaxOrderResults" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="MaxOrderResults" />
+                        <span asp-validation-for="MaxOrderResults"></span>
+                    </div>
+                </div>
+                <hr />
+                <div class="form-group row">
+                    <div class="col-md-3">
                         <nop-label asp-for="SearchCustomerEmails" />
                     </div>
                     <div class="col-md-9">
@@ -37,11 +47,30 @@
                 </div>
                 <div class="form-group row">
                     <div class="col-md-3">
+                        <nop-label asp-for="MaxCustomerResults" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="MaxCustomerResults" />
+                        <span asp-validation-for="MaxCustomerResults"></span>
+                    </div>
+                </div>
+                <hr />
+                <div class="form-group row">
+                    <div class="col-md-3">
                         <nop-label asp-for="SearchProductSkus" />
                     </div>
                     <div class="col-md-9">
                         <nop-editor asp-for="SearchProductSkus" />
                         <span asp-validation-for="SearchProductSkus"></span>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-label asp-for="MaxProductResults" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="MaxProductResults" />
+                        <span asp-validation-for="MaxProductResults"></span>
                     </div>
                 </div>
                 <div class="form-group row">

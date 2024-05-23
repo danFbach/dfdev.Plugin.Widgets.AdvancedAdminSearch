@@ -4,37 +4,80 @@
 
   currentQuery: null,
 
-  init: function () {
+  activePromises: [],
+
+  loaderElem: null,
+
+  init: () => {
     let input = document.querySelector('#search-box input');
-    if (input instanceof HTMLInputElement)
-      input.addEventListener('keyup', function (e) {
-        if (e instanceof Event)
-          adminAdvancedSearch.getResults(e.target.value, e.key == 'Enter');
+    if (input instanceof HTMLInputElement) {
+      ['input', 'change', 'paste', 'keyup', 'mouseup'].forEach(eventType => {
+        input.addEventListener(eventType, (e) => {
+          if (e instanceof Event)
+            adminAdvancedSearch.getResults(e.target.value, e.key == 'Enter');
+        }, false);
       });
+    }
+
   },
 
-  getResults: function (searchQuery, refresh = false) {
+  initLoader: () => {
+    adminAdvancedSearch.loaderElem = document.getElementById('list-loader');
 
-    if (searchQuery == adminAdvancedSearch.currentQuery &&
-      !refresh)
+    if (!(adminAdvancedSearch.loaderElem instanceof HTMLElement)) {
+      let div = document.createElement('div');
+      div.id = 'list-loader';
+      div.appendChild(document.createElement('div'))
+      let list = document.querySelector('.tt-dataset.tt-dataset-pages');
+      list.prepend(div);
+
+      adminAdvancedSearch.loaderElem = document.getElementById('list-loader');
+    }
+  },
+
+  getResults: (searchQuery, refresh = false) => {
+
+    let lastSearch = adminAdvancedSearch.activePromises[adminAdvancedSearch.activePromises.length - 1];
+
+    adminAdvancedSearch.initLoader();
+
+    if ((lastSearch != undefined && searchQuery == lastSearch.Query) || searchQuery == '') {
+      adminAdvancedSearch.loaderElem.classList.remove('loading');
       return;
+    }
 
-    clearTimeout(adminAdvancedSearch.resultsTimeout);
+    if (adminAdvancedSearch.resultsTimeout != null) {
+      clearTimeout(adminAdvancedSearch.resultsTimeout);
+      let lastRequest = adminAdvancedSearch.activePromises.find((item) => item.Id == adminAdvancedSearch.resultsTimeout);
+      if (lastRequest != undefined) {
+        lastRequest.Controller.abort();
+        adminAdvancedSearch.activePromises.splice(adminAdvancedSearch.activePromises.indexOf(lastRequest), 1)
+      }
+    }
 
     adminAdvancedSearch.resultsTimeout = setTimeout(function () {
       let fd = new FormData();
       fd.set('searchQuery', searchQuery);
 
+      let activeTimeout = adminAdvancedSearch.resultsTimeout;
+
       let tokenElems = document.getElementsByName('__RequestVerificationToken');
       if (tokenElems.length > 0 && tokenElems[0] instanceof HTMLInputElement)
         fd.set('__RequestVerificationToken', tokenElems[0].value)
 
-      fetch('/Admin/AdvancedAdminSearch/GetResults', adminAdvancedSearch.postFormObject(fd))
+      let abortController = new AbortController();
+
+      adminAdvancedSearch.activePromises.push({ Id: activeTimeout, Controller: abortController, Query: searchQuery });
+
+      adminAdvancedSearch.loaderElem.classList.add('loading');
+
+      fetch('/Admin/AdvancedAdminSearch/GetResults', adminAdvancedSearch.postFormObject(fd, abortController.signal))
         .then(res => adminAdvancedSearch.result(res))
         .then(res => {
 
           if (res.status && res.results !== undefined) {
-            var results = adminAdvancedSearch.parseResults(res.results);
+            adminAdvancedSearch.loaderElem.classList.remove('loading');
+            let results = adminAdvancedSearch.parseResults(res.results);
             adminAdvancedSearch.injectResults(results);
             adminAdvancedSearch.currentQuery = res.SearchQuery;
           } else {
@@ -45,11 +88,17 @@
           }
 
         })
-    }, 150);
+        .catch(err => {
+          if (err instanceof DOMException) {
+            return;
+          }
+        });
+
+    }, 300);
 
   },
 
-  injectResults: function (results) {
+  injectResults: (results) => {
 
     for (let elem of document.querySelectorAll('.tt-dataset.tt-dataset-pages .adv-result')) {
       if (elem instanceof HTMLElement)
@@ -57,16 +106,15 @@
     }
 
     let list = document.querySelector('.tt-dataset.tt-dataset-pages');
-    for (let result of results) {
-      list.appendChild(result);
-    }
+    if (list instanceof HTMLElement)
+      list.append(...results);
 
     let emptyMessage = document.querySelector('.tt-dataset.tt-dataset-pages .empty-message');
     if (emptyMessage instanceof HTMLElement)
       emptyMessage.style.display = 'none';
   },
 
-  parseResults: function (data) {
+  parseResults: (data) => {
 
     let results = [];
 
@@ -97,15 +145,19 @@
     return results;
   },
 
-  titleNode: function (title) {
+  titleNode: (title) => {
     let div = document.createElement('div');
     div.id = 'user-selection';
     div.classList.add('tt-suggestion', 'tt-selectable', 'adv-result');
     div.innerText = title;
+    div.style.fontWeight = '600';
+    div.style.padding = '5px 0';
+    div.style.textAlign = 'center';
+    div.style.color = '#007bff';
     return div;
   },
 
-  resultToNode: function (result) {
+  resultToNode: (result) => {
     let div = document.createElement('div');
     div.id = 'user-selection';
     div.classList.add('tt-suggestion', 'tt-selectable', 'adv-result');
@@ -114,19 +166,13 @@
     return div;
   },
 
-  loading: function () {
+  postObject: (data) => ({
+    method: 'POST',
+    headers: adminAdvancedSearch.jsonHeaders,
+    body: data != null && data.constructor !== ''.constructor ? JSON.stringify(data) : data
+  }),
 
-  },
-
-  postObject: function (data) {
-    return {
-      method: 'POST',
-      headers: adminAdvancedSearch.jsonHeaders,
-      body: data != null && data.constructor !== ''.constructor ? JSON.stringify(data) : data
-    };
-  },
-
-  postFormObject: function (data, e = null) {
+  postFormObject: (data, signal = null, e = null) => {
 
     let formData = data instanceof HTMLFormElement ? new FormData(data) : (data instanceof FormData ? data : null);
 
@@ -135,7 +181,8 @@
 
     return {
       method: 'POST',
-      body: formData
+      body: formData,
+      signal: signal
     };
   },
 
@@ -144,7 +191,7 @@
     'Content-Type': 'application/json'
   },
 
-  result: function (fetchResult) {
+  result: (fetchResult) => {
 
     if (fetchResult.ok) {
 
@@ -183,7 +230,7 @@
     }
   },
 
-  jsonResult: function (fetchResult) {
+  jsonResult: (fetchResult) => {
     if (fetchResult.ok) {
       return fetchResult.json().then(x => {
         x.isJson = true;
@@ -192,7 +239,7 @@
     }
   },
 
-  textResult: function (fetchResult) {
+  textResult: (fetchResult) => {
     if (fetchResult.ok) {
       return fetchResult.text();
     } else {
