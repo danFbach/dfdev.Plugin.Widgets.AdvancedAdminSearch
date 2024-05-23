@@ -55,7 +55,7 @@
       }
     }
 
-    adminAdvancedSearch.resultsTimeout = setTimeout(function () {
+    adminAdvancedSearch.resultsTimeout = setTimeout(() => {
       let fd = new FormData();
       fd.set('searchQuery', searchQuery);
 
@@ -81,7 +81,6 @@
             adminAdvancedSearch.injectResults(results);
             adminAdvancedSearch.currentQuery = res.SearchQuery;
           } else {
-            console.log(res);
             let emptyMessage = document.querySelector('.tt-dataset.tt-dataset-pages .empty-message');
             if (emptyMessage instanceof HTMLElement)
               emptyMessage.style.display = 'block';
