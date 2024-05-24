@@ -5,11 +5,13 @@ using System.Linq.Dynamic.Core;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Routing;
 using Nop.Core;
+using Nop.Core.Domain.Cms;
 using Nop.Services.Cms;
 using Nop.Services.Common;
 using Nop.Services.Configuration;
 using Nop.Services.Localization;
 using Nop.Services.Plugins;
+using Nop.Services.Security;
 using Nop.Web.Framework.Infrastructure;
 using Nop.Web.Framework.Menu;
 
