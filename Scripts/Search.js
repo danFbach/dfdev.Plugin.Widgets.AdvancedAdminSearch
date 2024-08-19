@@ -152,7 +152,7 @@
     div.style.fontWeight = '600';
     div.style.padding = '5px 0';
     div.style.textAlign = 'center';
-    div.style.color = '#007bff';
+    div.style.color = '#3c8dbc';
     return div;
   },
 
