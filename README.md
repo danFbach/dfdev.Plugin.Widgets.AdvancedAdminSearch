@@ -6,7 +6,7 @@ Installation:
   2. Copy output to nop Plugins folder
   3. restart nop to refresh plugin list
   4. install plugin from local plugins list and restart nop
-  5. go to /Admin/Widget/List
+  5. go to https://examplestore.com/Admin/Widget/List
   6. enable widget:
  
 ![widget_list](https://github.com/user-attachments/assets/6d968172-7a06-4bbb-b413-c49a2d0efcee)
