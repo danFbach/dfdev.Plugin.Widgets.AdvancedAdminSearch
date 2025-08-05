@@ -1,6 +1,5 @@
-﻿namespace dfdev.Plugin.Widgets.AdvancedAdminSearch
+﻿namespace dfdev.Plugin.Widgets.AdvancedAdminSearch;
+
+public static class AdvancedAdminSearchDefaults
 {
-    public static class AdvancedAdminSearchDefaults
-    {
-    }
 }
